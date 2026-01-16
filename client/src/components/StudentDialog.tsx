@@ -91,7 +91,6 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
             <Label htmlFor="name" className="text-slate-600 font-medium">Full Name</Label>
             <Input
               id="name"
-              placeholder="e.g. Alice Johnson"
               className="h-12 rounded-lg border-slate-200 focus:border-primary focus:ring-primary/20"
               {...form.register("name")}
             />
@@ -104,7 +103,6 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
             <Label htmlFor="currentLesson" className="text-slate-600 font-medium">Current Lesson</Label>
             <Input
               id="currentLesson"
-              placeholder="e.g. Piano Basics - Chapter 3"
               className="h-12 rounded-lg border-slate-200 focus:border-primary focus:ring-primary/20"
               {...form.register("currentLesson")}
             />

@@ -46,9 +46,9 @@ export function StudentCard({ student }: StudentCardProps) {
             <h3 className="text-xl font-bold font-display text-foreground group-hover:text-primary transition-colors">
               {student.name}
             </h3>
-            <div className="flex items-center mt-2 text-muted-foreground text-sm">
-              <BookOpen className="w-4 h-4 mr-1.5 opacity-70" />
-              {student.currentLesson}
+            <div className="flex items-center mt-2 text-muted-foreground text-sm overflow-hidden">
+              <BookOpen className="w-4 h-4 mr-1.5 opacity-70 flex-shrink-0" />
+              <span className="truncate">{student.currentLesson}</span>
             </div>
           </div>
         </div>

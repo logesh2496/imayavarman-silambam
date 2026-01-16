@@ -115,9 +115,9 @@ export default function StudentDetail() {
                 <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
                   <BookOpen className="w-5 h-5 text-primary" />
                 </div>
-                <div>
+                <div className="overflow-hidden">
                   <p className="text-xs uppercase font-bold text-slate-400 tracking-wider">Current Lesson</p>
-                  <p className="font-semibold">{student.currentLesson}</p>
+                  <p className="font-semibold truncate">{student.currentLesson}</p>
                 </div>
               </div>
 

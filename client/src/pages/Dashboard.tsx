@@ -17,8 +17,8 @@ export default function Dashboard() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-4xl font-display font-bold text-slate-900">Imaiyavarmam Silambam</h1>
-          <p className="text-slate-500 mt-2 text-lg">Student management and attendance tracking.</p>
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900">Imaiyavarman Silambam</h1>
+          <p className="text-slate-500 mt-2 text-base md:text-lg">Student management and attendance tracking.</p>
         </div>
         
         <StudentDialog
