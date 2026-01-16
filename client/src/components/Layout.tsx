@@ -20,7 +20,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <GraduationCap className="w-6 h-6" />
           </div>
           <h1 className="font-display font-bold text-xl tracking-tight text-slate-900">
-            TutorTrack
+            Imaiyavarmam Silambam
           </h1>
         </div>
 
