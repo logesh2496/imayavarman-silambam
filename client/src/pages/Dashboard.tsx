@@ -4,13 +4,16 @@ import { Layout } from "@/components/Layout";
 import { StudentDialog } from "@/components/StudentDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, User, CheckCircle2, AlertCircle } from "lucide-react";
+import { Search, Plus, User, CheckCircle2, AlertCircle, LayoutGrid, List } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [view, setView] = useState<"card" | "list">("card");
   const { data: allStudents, isLoading, error } = useStudents(search);
 
   const classes = ["Class 1", "Class 2", "Class 3", "Class 4"];
@@ -40,14 +43,29 @@ export default function Dashboard() {
 
       {/* Search & Filter Bar */}
       <div className="mb-8 space-y-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <Input 
-            className="pl-12 h-14 rounded-2xl border-slate-200 bg-white shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/5 text-lg" 
-            placeholder="Search by name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Input 
+              className="pl-12 h-14 rounded-2xl border-slate-200 bg-white shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/5 text-lg" 
+              placeholder="Search by name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <Tabs value={view} onValueChange={(v) => setView(v as "card" | "list")} className="w-auto">
+            <TabsList className="h-12 bg-slate-100/50 p-1 rounded-xl">
+              <TabsTrigger value="card" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Cards
+              </TabsTrigger>
+              <TabsTrigger value="list" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                <List className="w-4 h-4 mr-2" />
+                List
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -92,7 +110,7 @@ export default function Dashboard() {
           <h3 className="text-xl font-semibold text-slate-900">No students found</h3>
           <p className="text-slate-500 mt-2">Try adjusting your search or add a new student.</p>
         </div>
-      ) : (
+      ) : view === "card" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {students?.map((student, index) => (
             <motion.div
@@ -117,7 +135,7 @@ export default function Dashboard() {
                           {student.name}
                         </h3>
                         <p className="text-sm text-slate-500 font-medium mt-1 uppercase tracking-wider text-xs">
-                          {student.status}
+                          {student.classId} • {student.status}
                         </p>
                       </div>
                       
@@ -149,6 +167,49 @@ export default function Dashboard() {
               </Link>
             </motion.div>
           ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow>
+                <TableHead className="font-bold text-slate-900">Name</TableHead>
+                <TableHead className="font-bold text-slate-900">Class</TableHead>
+                <TableHead className="font-bold text-slate-900">Status</TableHead>
+                <TableHead className="font-bold text-slate-900">Current Lesson</TableHead>
+                <TableHead className="font-bold text-slate-900">Fees</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students?.map((student) => (
+                <TableRow key={student.id} className="group cursor-pointer hover:bg-slate-50/50">
+                  <TableCell className="font-medium">
+                    <Link href={`/students/${student.id}`} className="block text-slate-900 hover:text-primary group-hover:font-semibold transition-all">
+                      {student.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-slate-600">{student.classId}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      student.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                      student.status === 'Probation' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {student.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-slate-600 text-sm max-w-[200px] truncate">{student.currentLesson}</TableCell>
+                  <TableCell>
+                    <div className={`inline-flex items-center gap-1 text-[10px] font-bold ${
+                      student.feesPaid ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {student.feesPaid ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {student.feesPaid ? 'PAID' : 'UNPAID'}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </Layout>

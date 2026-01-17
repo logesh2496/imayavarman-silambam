@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { type InsertStudent, type InsertDailyLog, type Student, type DailyLog } from "@shared/schema";
+import { type InsertStudent, type InsertDailyLog, type Student, type DailyLog, type Achievement, type InsertAchievement } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export function useStudents(search?: string) {
@@ -114,7 +114,44 @@ export function useDeleteStudent() {
   });
 }
 
-// === LOGS ===
+// === ACHIEVEMENTS ===
+
+export function useStudentAchievements(studentId: number) {
+  return useQuery<Achievement[]>({
+    queryKey: ["/api/students", studentId, "achievements"],
+    queryFn: async () => {
+      const res = await fetch(`/api/students/${studentId}/achievements`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch achievements");
+      return await res.json();
+    },
+    enabled: !!studentId,
+  });
+}
+
+export function useCreateAchievement() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ studentId, ...data }: { studentId: number } & InsertAchievement) => {
+      const res = await fetch(`/api/students/${studentId}/achievements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to create achievement");
+      return await res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students", variables.studentId, "achievements"] });
+      toast({ title: "Achievement Added", description: "New achievement recorded" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+}
 
 export function useStudentLogs(studentId: number) {
   return useQuery({

@@ -127,5 +127,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/students/:id/achievements", async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+    const achievements = await storage.getAchievements(id);
+    res.json(achievements);
+  });
+
+  app.post("/api/students/:id/achievements", async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid ID" });
+    try {
+      const input = req.body;
+      const achievement = await storage.createAchievement({ ...input, studentId: id });
+      res.status(201).json(achievement);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }

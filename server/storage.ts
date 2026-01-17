@@ -1,5 +1,5 @@
 
-import { students, dailyLogs, type Student, type InsertStudent, type DailyLog, type InsertDailyLog } from "@shared/schema";
+import { students, dailyLogs, achievements, type Student, type InsertStudent, type DailyLog, type InsertDailyLog, type Achievement, type InsertAchievement } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
@@ -11,6 +11,8 @@ export interface IStorage {
   deleteStudent(id: number): Promise<void>;
   getDailyLogs(studentId: number): Promise<DailyLog[]>;
   createDailyLog(log: InsertDailyLog): Promise<DailyLog>;
+  getAchievements(studentId: number): Promise<Achievement[]>;
+  createAchievement(achievement: InsertAchievement): Promise<Achievement>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -44,6 +46,15 @@ export class DatabaseStorage implements IStorage {
   async createDailyLog(insertLog: InsertDailyLog): Promise<DailyLog> {
     const [log] = await db.insert(dailyLogs).values(insertLog).returning();
     return log;
+  }
+
+  async getAchievements(studentId: number): Promise<Achievement[]> {
+    return await db.select().from(achievements).where(eq(achievements.studentId, studentId));
+  }
+
+  async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+    const [newAchievement] = await db.insert(achievements).values(achievement).returning();
+    return newAchievement;
   }
 }
 

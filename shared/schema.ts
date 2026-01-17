@@ -20,12 +20,23 @@ export const dailyLogs = pgTable("daily_logs", {
   lessonSummary: text("lesson_summary"),
 });
 
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull(),
+  level: text("level").notNull(), // 'District', 'State', 'National'
+  medal: text("medal").notNull(), // 'Gold', 'Silver', 'Bronze'
+  description: text("description"),
+});
+
 // Schemas
 export const insertStudentSchema = createInsertSchema(students).omit({ id: true });
 export const insertDailyLogSchema = createInsertSchema(dailyLogs).omit({ id: true });
+export const insertAchievementSchema = createInsertSchema(achievements).omit({ id: true });
 
 // Types
 export type Student = typeof students.$inferSelect;
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type DailyLog = typeof dailyLogs.$inferSelect;
 export type InsertDailyLog = z.infer<typeof insertDailyLogSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
