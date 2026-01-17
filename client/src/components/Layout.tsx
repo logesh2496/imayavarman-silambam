@@ -16,15 +16,13 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Mobile-First Navigation */}
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-            <GraduationCap className="w-5 h-5" />
-          </div>
+          <img src="/logo.png" alt="Imaiyavarman Silambam Logo" className="w-8 h-8 rounded-lg object-contain" />
           <h1 className="font-display font-bold text-lg tracking-tight text-slate-900 truncate">
-            Imaiyavarman Silambam
+            Imaiyavarman Training Center
           </h1>
         </div>
         
-        <nav className="flex items-center gap-1">
+        {/* <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const isActive = location === item.href;
             return (
@@ -38,7 +36,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-        </nav>
+        </nav> */}
       </header>
 
       {/* Main Content Area */}

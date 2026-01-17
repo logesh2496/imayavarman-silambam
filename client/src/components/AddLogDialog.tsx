@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2 } from "lucide-react";
 
 interface AddLogDialogProps {
-  studentId: number;
+  studentId: string;
 }
 
 export function AddLogDialog({ studentId }: AddLogDialogProps) {

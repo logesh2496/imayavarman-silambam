@@ -1,34 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
-import { type InsertStudent, type InsertDailyLog, type Student, type DailyLog, type Achievement, type InsertAchievement } from "@shared/schema";
+import { studentService } from "@/services/student.service";
+import { dailyLogService } from "@/services/dailyLog.service";
+import { achievementService } from "@/services/achievement.service";
+import { type InsertStudent, type InsertDailyLog, type InsertAchievement, type DailyLog } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
 export function useStudents(search?: string) {
   return useQuery({
-    queryKey: [api.students.list.path, search],
+    queryKey: ["students", search],
     queryFn: async () => {
-      // Construct URL with optional search param
-      const url = new URL(api.students.list.path, window.location.origin);
+      const students = await studentService.getStudents();
       if (search) {
-        url.searchParams.append("search", search);
+        return students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
       }
-      
-      const res = await fetch(url.toString(), { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch students");
-      return api.students.list.responses[200].parse(await res.json());
+      return students;
     },
   });
 }
 
-export function useStudent(id: number) {
+export function useStudent(id: string) {
   return useQuery({
-    queryKey: [api.students.get.path, id],
+    queryKey: ["students", id],
     queryFn: async () => {
-      const url = buildUrl(api.students.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error("Failed to fetch student");
-      return api.students.get.responses[200].parse(await res.json());
+      if (!id) return null;
+      return await studentService.getStudent(id);
     },
     enabled: !!id,
   });
@@ -40,28 +35,14 @@ export function useCreateStudent() {
 
   return useMutation({
     mutationFn: async (data: InsertStudent) => {
-      const res = await fetch(api.students.create.path, {
-        method: api.students.create.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      
-      if (!res.ok) {
-        if (res.status === 400) {
-          const error = api.students.create.responses[400].parse(await res.json());
-          throw new Error(error.message);
-        }
-        throw new Error("Failed to create student");
-      }
-      return api.students.create.responses[201].parse(await res.json());
+      return await studentService.createStudent(data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast({ title: "Success", description: "Student added successfully" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
     },
   });
 }
@@ -71,25 +52,17 @@ export function useUpdateStudent() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: number } & Partial<InsertStudent>) => {
-      const url = buildUrl(api.students.update.path, { id });
-      const res = await fetch(url, {
-        method: api.students.update.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-        credentials: "include",
-      });
-
-      if (!res.ok) throw new Error("Failed to update student");
-      return api.students.update.responses[200].parse(await res.json());
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<InsertStudent>) => {
+      await studentService.updateStudent(id, updates);
+      return { id, ...updates };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.students.get.path, data.id] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", data.id] });
       toast({ title: "Updated", description: "Student details updated" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
     },
   });
 }
@@ -99,30 +72,26 @@ export function useDeleteStudent() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      const url = buildUrl(api.students.delete.path, { id });
-      const res = await fetch(url, {
-        method: api.students.delete.method,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete student");
+    mutationFn: async (id: string) => {
+      await studentService.deleteStudent(id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast({ title: "Deleted", description: "Student removed from system" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
     },
   });
 }
 
 // === ACHIEVEMENTS ===
 
-export function useStudentAchievements(studentId: number) {
-  return useQuery<Achievement[]>({
-    queryKey: ["/api/students", studentId, "achievements"],
+export function useStudentAchievements(studentId: string) {
+  return useQuery({
+    queryKey: ["achievements", studentId],
     queryFn: async () => {
-      const res = await fetch(`/api/students/${studentId}/achievements`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch achievements");
-      return await res.json();
+      return await achievementService.getAchievements(studentId);
     },
     enabled: !!studentId,
   });
@@ -133,34 +102,24 @@ export function useCreateAchievement() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ studentId, ...data }: { studentId: number } & InsertAchievement) => {
-      const res = await fetch(`/api/students/${studentId}/achievements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to create achievement");
-      return await res.json();
+    mutationFn: async ({ studentId, ...data }: { studentId: string } & InsertAchievement) => {
+      return await achievementService.createAchievement({ studentId, ...data });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/students", variables.studentId, "achievements"] });
+      queryClient.invalidateQueries({ queryKey: ["achievements", variables.studentId] });
       toast({ title: "Achievement Added", description: "New achievement recorded" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
     },
   });
 }
 
-export function useStudentLogs(studentId: number) {
+export function useStudentLogs(studentId: string) {
   return useQuery({
-    queryKey: [api.students.getLogs.path, studentId],
+    queryKey: ["dailyLogs", studentId],
     queryFn: async () => {
-      const url = buildUrl(api.students.getLogs.path, { id: studentId });
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch logs");
-      return api.students.getLogs.responses[200].parse(await res.json());
+      return await dailyLogService.getDailyLogs(studentId);
     },
     enabled: !!studentId,
   });
@@ -171,24 +130,108 @@ export function useCreateLog() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ studentId, ...data }: { studentId: number } & Omit<InsertDailyLog, "studentId">) => {
-      const url = buildUrl(api.students.createLog.path, { id: studentId });
-      const res = await fetch(url, {
-        method: api.students.createLog.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      
-      if (!res.ok) throw new Error("Failed to create log");
-      return api.students.createLog.responses[201].parse(await res.json());
+    mutationFn: async ({ studentId, ...data }: { studentId: string } & Omit<InsertDailyLog, "studentId">) => {
+      return await dailyLogService.createDailyLog({ ...data, studentId });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: [api.students.getLogs.path, variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["dailyLogs", variables.studentId] });
       toast({ title: "Log Added", description: "Daily progress recorded" });
     },
     onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDailyLogsByDate(date: Date) {
+  return useQuery({
+    queryKey: ["dailyLogs", "date", date.toISOString().split('T')[0]],
+    queryFn: async () => {
+      return await dailyLogService.getDailyLogsByDate(date);
+    },
+    enabled: !!date,
+  });
+}
+
+export function useDailyLogsRange(startDate: Date, endDate: Date) {
+  return useQuery({
+    queryKey: ["dailyLogs", "range", startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]],
+    queryFn: async () => {
+      return await dailyLogService.getDailyLogsRange(startDate, endDate);
+    },
+    enabled: !!startDate && !!endDate,
+  });
+}
+
+// ... existing code ...
+
+export function useDeleteLog() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await dailyLogService.deleteDailyLog(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dailyLogs"] });
+      // toast({ title: "Deleted", description: "Log removed" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: (error as Error).message, variant: "destructive" });
+    },
+  });
+}
+
+export function useBulkCreateLogs() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (logs: InsertDailyLog[]) => {
+      return await Promise.all(logs.map(log => dailyLogService.createDailyLog(log)));
+    },
+    onMutate: async (newLogs) => {
+      // We assume all logs are for the same date (which is true for markAllPresent)
+      if (newLogs.length === 0) return;
+      
+      const date = newLogs[0].date instanceof Date ? newLogs[0].date : new Date(newLogs[0].date);
+      const dateKey = date.toISOString().split('T')[0];
+      const queryKey = ["dailyLogs", "date", dateKey];
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot the previous value
+      const previousLogs = queryClient.getQueryData<DailyLog[]>(queryKey);
+
+      // Optimistically update to the new value
+      if (previousLogs) {
+        const optimisticLogs: DailyLog[] = newLogs.map((log, index) => ({
+          ...log,
+          // Generate a temp ID that won't collide
+          id: `temp-id-${Date.now()}-${index}`,
+          date: log.date instanceof Date ? log.date : new Date(log.date)
+        }));
+
+        queryClient.setQueryData<DailyLog[]>(queryKey, (old) => {
+          return [...(old || []), ...optimisticLogs];
+        });
+      }
+
+      return { previousLogs, queryKey };
+    },
+    onError: (err, newLogs, context) => {
+      if (context?.previousLogs) {
+        queryClient.setQueryData(context.queryKey, context.previousLogs);
+      }
+      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["dailyLogs"] });
+    },
+    onSuccess: (data) => {
+      toast({ title: "Attendance Updated", description: `Marked ${data.length} students present` });
     },
   });
 }

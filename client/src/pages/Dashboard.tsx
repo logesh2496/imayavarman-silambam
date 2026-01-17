@@ -1,16 +1,200 @@
-import { useState } from "react";
-import { useStudents } from "@/hooks/use-students";
+import { useState, useMemo } from "react";
+import { useStudents, useDailyLogsByDate, useCreateLog, useDeleteLog, useBulkCreateLogs } from "@/hooks/use-students";
 import { Layout } from "@/components/Layout";
 import { StudentDialog } from "@/components/StudentDialog";
+import { AttendanceHistoryDialog } from "@/components/AttendanceHistoryDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, User, CheckCircle2, AlertCircle, LayoutGrid, List } from "lucide-react";
+import { Search, Plus, User, CheckCircle2, AlertCircle, LayoutGrid, List, Check, X, CalendarDays, Users } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format } from "date-fns";
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState("attendance");
+
+  // Keep date stable for the query
+  const today = useMemo(() => new Date(), []);
+  
+  return (
+    <Layout>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900">Dashboard</h1>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-8 w-full md:w-auto h-12 p-1 bg-slate-100 rounded-xl justify-start">
+          <TabsTrigger value="attendance" className="flex-1 md:flex-none h-10 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <CalendarDays className="w-4 h-4 mr-2" />
+            Attendance
+          </TabsTrigger>
+          <TabsTrigger value="students" className="flex-1 md:flex-none h-10 px-6 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Users className="w-4 h-4 mr-2" />
+            Students
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="attendance" className="mt-0 space-y-6">
+          <AttendanceView date={today} />
+        </TabsContent>
+
+        <TabsContent value="students" className="mt-0">
+          <StudentsView />
+        </TabsContent>
+      </Tabs>
+    </Layout>
+  );
+}
+
+function AttendanceView({ date }: { date: Date }) {
+  const { data: students, isLoading: isLoadingStudents } = useStudents();
+  const { data: logs, isLoading: isLoadingLogs } = useDailyLogsByDate(date);
+  const createLog = useCreateLog();
+  const bulkCreateLogs = useBulkCreateLogs();
+  const deleteLog = useDeleteLog();
+
+  const [filterClass, setFilterClass] = useState<string | null>(null);
+
+  const attendanceMap = useMemo(() => {
+    const map: Record<string, string> = {}; // studentId -> logId
+    logs?.forEach(l => {
+      map[l.studentId] = l.id;
+    });
+    return map;
+  }, [logs]);
+
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4"];
+  
+  const filteredStudents = useMemo(() => {
+    if (!students) return [];
+    if (!filterClass) return students;
+    return students.filter(s => s.classId === filterClass);
+  }, [students, filterClass]);
+
+  const presentCount = filteredStudents.filter(s => !!attendanceMap[s.id]).length;
+  const totalCount = filteredStudents.length;
+
+  const handleToggle = (studentId: string) => {
+    const logId = attendanceMap[studentId];
+    if (logId) {
+      deleteLog.mutate(logId);
+    } else {
+      createLog.mutate({ studentId, attended: true, date: date });
+    }
+  };
+
+  const markAllPresent = () => {
+    const absent = filteredStudents.filter(s => !attendanceMap[s.id]);
+    
+    if (absent.length === 0) return;
+
+    const newLogs = absent.map(s => ({
+      studentId: s.id,
+      attended: true,
+      date: date
+    }));
+
+    bulkCreateLogs.mutate(newLogs);
+  };
+
+  if (isLoadingStudents || isLoadingLogs) {
+    return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+       {[1,2,3,4,5,6].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
+    </div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="flex gap-2 bg-slate-100 py-1 rounded-lg">
+            <Button 
+              variant={filterClass === null ? "default" : "ghost"} 
+              size="sm" 
+              onClick={() => setFilterClass(null)}
+              className={filterClass === null ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}
+            >
+              All
+            </Button>
+            {classes.map(c => (
+              <Button
+                key={c}
+                variant={filterClass === c ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setFilterClass(c)}
+                className={filterClass === c ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}
+              >
+                {c}
+              </Button>
+            ))}
+            <div className="w-px h-6 bg-slate-200 my-auto mx-1" />
+            <AttendanceHistoryDialog />
+          </div>
+
+        <div className="flex items-center gap-4 w-full">
+           <div className="text-sm font-medium text-slate-500">
+            <span className="text-slate-900 font-bold">Today</span>
+            <span className="mx-2 text-slate-300">•</span>
+            {presentCount} / {totalCount} Present
+          </div>
+           
+           <Button onClick={markAllPresent} disabled={presentCount === totalCount} className="bg-green-600 hover:bg-green-700 text-white ml-auto">
+             <CheckCircle2 className="w-4 h-4 mr-2" />
+             Mark All Present
+           </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredStudents.map(student => {
+          const isPresent = !!attendanceMap[student.id];
+          return (
+            <motion.div layout key={student.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div 
+                className={`
+                  relative flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer select-none
+                  ${isPresent 
+                    ? 'bg-green-50 border-green-500 shadow-sm' 
+                    : 'bg-white border-slate-100 hover:border-slate-300'
+                  }
+                `}
+                onClick={() => handleToggle(student.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`
+                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                    ${isPresent ? 'bg-green-200 text-green-700' : 'bg-slate-100 text-slate-500'}
+                  `}>
+                    {student.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className={`font-bold ${isPresent ? 'text-green-900' : 'text-slate-900'}`}>{student.name}</h3>
+                    <p className="text-xs text-slate-500">{student.classId}</p>
+                  </div>
+                </div>
+
+                <div className={`
+                  w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                  ${isPresent ? 'bg-green-500 text-white' : 'bg-slate-100 text-slate-300'}
+                `}>
+                  <Check className="w-5 h-5" />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StudentsView() {
   const [search, setSearch] = useState("");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [view, setView] = useState<"card" | "list">("card");
@@ -23,27 +207,9 @@ export default function Dashboard() {
     : allStudents;
 
   return (
-    <Layout>
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold text-slate-900">Imaiyavarman Silambam</h1>
-          <p className="text-slate-500 mt-2 text-base md:text-lg">Student management and attendance tracking.</p>
-        </div>
-        
-        <StudentDialog
-          trigger={
-            <Button className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
-              <Plus className="w-5 h-5 mr-2" />
-              Add Student
-            </Button>
-          }
-        />
-      </div>
-
-      {/* Search & Filter Bar */}
-      <div className="mb-8 space-y-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6"> 
+        <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <Input 
@@ -54,44 +220,54 @@ export default function Dashboard() {
             />
           </div>
 
-          <Tabs value={view} onValueChange={(v) => setView(v as "card" | "list")} className="w-auto">
-            <TabsList className="h-12 bg-slate-100/50 p-1 rounded-xl">
-              <TabsTrigger value="card" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                <LayoutGrid className="w-4 h-4 mr-2" />
-                Cards
-              </TabsTrigger>
-              <TabsTrigger value="list" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                <List className="w-4 h-4 mr-2" />
-                List
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+          <div className="flex gap-4">
+             <Tabs value={view} onValueChange={(v) => setView(v as "card" | "list")} className="w-auto">
+              <TabsList className="h-12 bg-slate-100/50 p-1 rounded-xl">
+                <TabsTrigger value="card" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Cards
+                </TabsTrigger>
+                <TabsTrigger value="list" className="rounded-lg h-10 px-4 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                  <List className="w-4 h-4 mr-2" />
+                  List
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedClass === null ? "default" : "outline"}
-            size="sm"
+            <StudentDialog
+              trigger={
+                <Button className="h-12 px-6 rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200">
+                  <Plus className="w-5 h-5 mr-2" />
+                  Add Student
+                </Button>
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+       <div className="flex gap-2 bg-slate-100 p-1 rounded-lg">
+          <Button 
+            variant={selectedClass === null ? "default" : "ghost"} 
+            size="sm" 
             onClick={() => setSelectedClass(null)}
-            className="rounded-full px-4"
+            className={selectedClass === null ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}
           >
-            All Classes
+            All
           </Button>
-          {classes.map((c) => (
+          {classes.map(c => (
             <Button
               key={c}
-              variant={selectedClass === c ? "default" : "outline"}
+              variant={selectedClass === c ? "default" : "ghost"}
               size="sm"
               onClick={() => setSelectedClass(c)}
-              className="rounded-full px-4"
+              className={selectedClass === c ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}
             >
               {c}
             </Button>
           ))}
         </div>
-      </div>
 
-      {/* Content Area */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -175,7 +351,6 @@ export default function Dashboard() {
               <TableRow>
                 <TableHead className="font-bold text-slate-900">Name</TableHead>
                 <TableHead className="font-bold text-slate-900">Class</TableHead>
-                <TableHead className="font-bold text-slate-900">Status</TableHead>
                 <TableHead className="font-bold text-slate-900">Current Lesson</TableHead>
                 <TableHead className="font-bold text-slate-900">Fees</TableHead>
               </TableRow>
@@ -189,14 +364,6 @@ export default function Dashboard() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-slate-600">{student.classId}</TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      student.status === 'Active' ? 'bg-green-100 text-green-700' : 
-                      student.status === 'Probation' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {student.status}
-                    </span>
-                  </TableCell>
                   <TableCell className="text-slate-600 text-sm max-w-[200px] truncate">{student.currentLesson}</TableCell>
                   <TableCell>
                     <div className={`inline-flex items-center gap-1 text-[10px] font-bold ${
@@ -212,6 +379,6 @@ export default function Dashboard() {
           </Table>
         </div>
       )}
-    </Layout>
+    </div>
   );
 }

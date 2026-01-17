@@ -159,7 +159,7 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {isEditing && <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status" className="text-slate-600 font-medium">Status</Label>
               <Select 
@@ -193,7 +193,7 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
                 </span>
               </div>
             </div>
-          </div>
+          </div>}
 
           <Button 
             type="submit" 

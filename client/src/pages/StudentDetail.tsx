@@ -35,7 +35,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default function StudentDetail() {
   const [, params] = useRoute("/students/:id");
-  const id = Number(params?.id);
+  const id = params?.id || "";
   const [, setLocation] = useLocation();
 
   const { data: student, isLoading: loadingStudent } = useStudent(id);
@@ -72,6 +72,7 @@ export default function StudentDetail() {
       studentId: id,
       lessonSummary: data.lessonSummary,
       attended: data.attended,
+      date: new Date(),
     });
     logForm.reset({ lessonSummary: "", attended: true });
   };
