@@ -9,6 +9,7 @@ export const students = pgTable("students", {
   currentLesson: text("current_lesson").notNull(),
   status: text("status").notNull(), // e.g. 'Active', 'Probation', 'Graduated'
   feesPaid: boolean("fees_paid").default(false),
+  classId: text("class_id").notNull().default("Class 1"),
 });
 
 export const dailyLogs = pgTable("daily_logs", {

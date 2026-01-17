@@ -13,6 +13,23 @@ import { z } from "zod";
 
 type FormData = InsertStudent;
 
+const lessons = [
+  "Long Stick",
+  "Middle Stick",
+  "Sword",
+  "Double Stick",
+  "Surul",
+  "Valari",
+  "Figth",
+  "Kalyana Varisi",
+  "Ball",
+  "Kalladi Varisi",
+  "Vel Kambu",
+  "Others"
+];
+
+const classes = ["Class 1", "Class 2", "Class 3", "Class 4"];
+
 interface Props {
   student?: Student; // If provided, we are in Edit mode
   trigger?: React.ReactNode;
@@ -34,9 +51,10 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
     resolver: zodResolver(insertStudentSchema),
     defaultValues: {
       name: "",
-      currentLesson: "",
+      currentLesson: "Long Stick",
       status: "Active",
       feesPaid: false,
+      classId: "Class 1",
     },
   });
 
@@ -49,13 +67,15 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
           currentLesson: student.currentLesson,
           status: student.status,
           feesPaid: student.feesPaid ?? false,
+          classId: student.classId ?? "Class 1",
         });
       } else {
         form.reset({
           name: "",
-          currentLesson: "",
+          currentLesson: "Long Stick",
           status: "Active",
           feesPaid: false,
+          classId: "Class 1",
         });
       }
     }
@@ -101,13 +121,41 @@ export function StudentDialog({ student, trigger, open: controlledOpen, onOpenCh
 
           <div className="space-y-2">
             <Label htmlFor="currentLesson" className="text-slate-600 font-medium">Current Lesson</Label>
-            <Input
-              id="currentLesson"
-              className="h-12 rounded-lg border-slate-200 focus:border-primary focus:ring-primary/20"
-              {...form.register("currentLesson")}
-            />
+            <Select 
+              onValueChange={(val) => form.setValue("currentLesson", val)} 
+              value={form.watch("currentLesson")}
+            >
+              <SelectTrigger className="h-12 rounded-lg border-slate-200">
+                <SelectValue placeholder="Select lesson" />
+              </SelectTrigger>
+              <SelectContent>
+                {lessons.map(lesson => (
+                  <SelectItem key={lesson} value={lesson}>{lesson}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {form.formState.errors.currentLesson && (
               <p className="text-xs text-red-500">{form.formState.errors.currentLesson.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="classId" className="text-slate-600 font-medium">Class</Label>
+            <Select 
+              onValueChange={(val) => form.setValue("classId", val)} 
+              value={form.watch("classId")}
+            >
+              <SelectTrigger className="h-12 rounded-lg border-slate-200">
+                <SelectValue placeholder="Select class" />
+              </SelectTrigger>
+              <SelectContent>
+                {classes.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.classId && (
+              <p className="text-xs text-red-500">{form.formState.errors.classId.message}</p>
             )}
           </div>
 

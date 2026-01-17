@@ -10,7 +10,14 @@ import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const [search, setSearch] = useState("");
-  const { data: students, isLoading, error } = useStudents(search);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const { data: allStudents, isLoading, error } = useStudents(search);
+
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4"];
+  
+  const students = selectedClass 
+    ? allStudents?.filter(s => s.classId === selectedClass)
+    : allStudents;
 
   return (
     <Layout>
@@ -32,14 +39,38 @@ export default function Dashboard() {
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="mb-8 relative max-w-md">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-        <Input 
-          className="pl-12 h-14 rounded-2xl border-slate-200 bg-white shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/5 text-lg" 
-          placeholder="Search by name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="mb-8 space-y-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+          <Input 
+            className="pl-12 h-14 rounded-2xl border-slate-200 bg-white shadow-sm focus:border-primary focus:ring-4 focus:ring-primary/5 text-lg" 
+            placeholder="Search by name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedClass === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedClass(null)}
+            className="rounded-full px-4"
+          >
+            All Classes
+          </Button>
+          {classes.map((c) => (
+            <Button
+              key={c}
+              variant={selectedClass === c ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedClass(c)}
+              className="rounded-full px-4"
+            >
+              {c}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Content Area */}
