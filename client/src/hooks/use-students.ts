@@ -134,7 +134,7 @@ export function useCreateLog() {
       return await dailyLogService.createDailyLog({ ...data, studentId });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["dailyLogs", variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["dailyLogs"] });
       toast({ title: "Log Added", description: "Daily progress recorded" });
     },
     onError: (error) => {
